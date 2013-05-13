@@ -7,27 +7,27 @@ If the email address cannot be matched with a gravatar account, gravatar will re
 
 Display user's gravatar
 
-    echo Gravatar_Avatar::factory(array('email' => 'youremail@address.com))
-            ->image_size(500)
-            ->https_false()
-            ->rating_pg()
-            ->image_default_identicon()
+    echo Kohana_Gravatar::factory(array('email' => 'youremail@address.com'))
+            ->size_set(64)
+            ->https_set(false)
+            ->rating_set_pg()
+            ->default_set_identicon()
             ->image();
 
 Display 64x64 gravatar
 
-    echo Gravatar_Avatar::factory(array('email' => 'youremail@address.com))
-            ->image_size(64)
-            ->https_false()
-            ->rating_pg()
-            ->image_default_identicon()
+    echo Kohana_Gravatar::factory(array('email' => 'youremail@address.com'))
+            ->size_set(64)
+            ->https_set(false)
+            ->rating_set_pg()
+            ->default_set_identicon()
             ->image();
 
 Download user's gravatar
 
-    Gravatar_Avatar::factory(array('email' => 'youremail@address.com))
-            ->image_size(500)
-            ->https_false()
-            ->rating_pg()
-            ->image_default_identicon()
+    Kohana_Gravatar::factory(array('email' => 'youremail@address.com'))
+            ->size_set(128)
+            ->https_set(false)
+            ->rating_set_pg()
+            ->default_set_identicon()
             ->download();

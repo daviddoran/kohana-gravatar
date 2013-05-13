@@ -9,7 +9,7 @@ class Kohana_Gravatar
 {
 
     /**
-     * Email addres
+     * Email address
      *
      * @var string
      */
@@ -52,10 +52,10 @@ class Kohana_Gravatar
     protected $https = TRUE;
 
     /**
-     * Retuns new \Gravatar_Avatar object
+     * Returns new \Gravatar object
      *
      * @param array $params
-     * @return \Gravatar_Avatar
+     * @return \Gravatar
      */
     public static function factory(array $params = array())
     {
@@ -66,7 +66,7 @@ class Kohana_Gravatar
      * Constructor forces execution of $this->setup()
      *
      * @param array $params
-     * @return \Gravatar_Avatar
+     * @return \Kohana_Gravatar
      */
     public function __construct(array $params = array())
     {
@@ -84,7 +84,7 @@ class Kohana_Gravatar
      * Helps to load default settings passed by array.
      *
      * @param array $params
-     * @return \Gravatar_Avatar
+     * @return \Kohana_Gravatar
      */
     public function setup(array $params)
     {
@@ -129,9 +129,9 @@ class Kohana_Gravatar
     }
 
     /**
-     * Resets all properties. This functon helps to reuse object for another gravatar request.
+     * Resets all properties. This function helps to reuse object for another gravatar request.
      *
-     * @return \Gravatar_Avatar
+     * @return \Kohana_Gravatar
      */
     public function reset()
     {
@@ -146,7 +146,7 @@ class Kohana_Gravatar
     /**
      * Returns gravatar URL based on passed settings.
      *
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return string
      */
     protected function url_make()
@@ -215,12 +215,12 @@ class Kohana_Gravatar
      * Downloads gravatar to location on server. Defaults to tmp directory.
      *
      * @param mixed $destination
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \stdClass
      */
     public function download($destination = NULL)
     {
-        // get tmp direcoty if no destination passed
+        // get tmp directory if no destination passed
         if (!$destination)
         {
             $destination = sys_get_temp_dir();
@@ -306,10 +306,10 @@ class Kohana_Gravatar
     }
 
     /**
-     * Checks whether all necessary properties have been set correclty.
+     * Checks whether all necessary properties have been set correctly.
      *
      * @param boolean $throw_exceptions
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return boolean
      */
     public function validate($throw_exceptions = TRUE)
@@ -376,8 +376,8 @@ class Kohana_Gravatar
      * Sets used email address.
      *
      * @param string $email
-     * @throws Kohana_Exception
-     * @return \Gravatar_Avatar
+     * @throws \Kohana_Exception
+     * @return \Kohana_Gravatar
      */
     public function email_set($email)
     {
@@ -408,10 +408,10 @@ class Kohana_Gravatar
     }
 
     /**
-     * Sets returnes image size.
+     * Sets returned image size.
      *
      * @param integer $size
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function size_set($size)
@@ -455,8 +455,8 @@ class Kohana_Gravatar
      * Sets content rating.
      *
      * @param string $rating
-     * @throws Kohana_Exception
-     * @return \Kohana_Gravatar_Avatar
+     * @throws \Kohana_Exception
+     * @return \Kohana_Gravatar
      */
     public function rating_set($rating)
     {
@@ -492,8 +492,8 @@ class Kohana_Gravatar
     /**
      * Sets content rating to G
      *
-     * @throws Kohana_Exception
-     * @return \Kohana_Gravatar_Avatar
+     * @throws \Kohana_Exception
+     * @return \Kohana_Gravatar
      */
     public function rating_set_g()
     {
@@ -503,8 +503,8 @@ class Kohana_Gravatar
     /**
      * Sets content rating to PG
      *
-     * @throws Kohana_Exception
-     * @return \Kohana_Gravatar_Avatar
+     * @throws \Kohana_Exception
+     * @return \Kohana_Gravatar
      */
     public function rating_set_pg()
     {
@@ -514,7 +514,7 @@ class Kohana_Gravatar
     /**
      * Sets content rating to R
      *
-     * @return \Kohana_Gravatar_Avatar
+     * @return \Kohana_Gravatar
      */
     public function rating_set_r()
     {
@@ -524,8 +524,8 @@ class Kohana_Gravatar
     /**
      * Sets content rating to X
      *
-     * @throws Kohana_Exception
-     * @return \Kohana_Gravatar_Avatar
+     * @throws \Kohana_Exception
+     * @return \Kohana_Gravatar
      */
     public function rating_set_x()
     {
@@ -536,7 +536,7 @@ class Kohana_Gravatar
      * Sets default image if the user has no gravatar profile.
      *
      * @param string $image_default
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set($image_default)
@@ -584,7 +584,7 @@ class Kohana_Gravatar
      * Sets default image to url.
      *
      * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set_url($url)
@@ -595,8 +595,7 @@ class Kohana_Gravatar
     /**
      * Sets default image to 404.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set_404()
@@ -607,8 +606,7 @@ class Kohana_Gravatar
     /**
      * Sets default image to mm.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set_mm()
@@ -619,8 +617,7 @@ class Kohana_Gravatar
     /**
      * Sets default image to identicon.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set_identicon()
@@ -631,8 +628,7 @@ class Kohana_Gravatar
     /**
      * Sets default image to monsterid.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set_monsterid()
@@ -643,8 +639,7 @@ class Kohana_Gravatar
     /**
      * Sets default image to wavatar.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set_wavatar()
@@ -655,8 +650,7 @@ class Kohana_Gravatar
     /**
      * Sets default image to retro.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set_retro()
@@ -667,8 +661,7 @@ class Kohana_Gravatar
     /**
      * Sets default image to blank.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_set_blank()
@@ -680,7 +673,7 @@ class Kohana_Gravatar
      * Forces gravatar to display default image.
      *
      * @param boolean $force
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Gravatar
      */
     public function default_force_set($force)
@@ -701,8 +694,7 @@ class Kohana_Gravatar
     /**
      * Forces default image.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_force_set_true()
@@ -713,8 +705,7 @@ class Kohana_Gravatar
     /**
      * Disabled forcing of default image.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function default_force_set_false()
@@ -726,8 +717,8 @@ class Kohana_Gravatar
      * Sets whether https ot http should be used to query image.
      *
      * @param boolean $enabled
-     * @throws Kohana_Exception
-     * @return \Gravatar_Avatar
+     * @throws \Kohana_Exception
+     * @return \Kohana_Gravatar
      */
     public function https_set($enabled)
     {
@@ -747,8 +738,7 @@ class Kohana_Gravatar
     /**
      * Enabled https.
      *
-     * @param string $url
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
     public function https_set_true()
@@ -759,7 +749,6 @@ class Kohana_Gravatar
     /**
      * Disables https.
      *
-     * @param string $url
      * @throws Kohana_Exception
      * @return \Kohana_Gravatar
      */
@@ -775,7 +764,7 @@ class Kohana_Gravatar
      * @param array $variables
      * @param int $code
      * @param Exception $previous
-     * @throws Kohana_Exception
+     * @throws \Kohana_Exception
      */
     protected function exception($message = '', array $variables = NULL, $code = 0, Exception $previous = NULL)
     {
