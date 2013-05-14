@@ -2,39 +2,46 @@
 
 /**
  * Written by Andreas Glaser (http://andreas.glaser.me)
+ *
+ * Redesigned API and implementation by David Doran (daviddoran.com)
  */
 defined('SYSPATH') or die('No direct script access.');
 
 class Kohana_Gravatar
 {
+    const G  = "g";
+    const PG = "pg";
+    const R  = "r";
+    const X  = "x";
 
-    /**
-     * Email address
-     *
-     * @var string
-     */
-    protected $email;
+    const E404 = "404"; //return HTTP 404 error if email not found
+    const MM = "mm"; //mystery-man; a simple, cartoon-style silhouetted outline of a person
+    const IDENTICON = "identicon"; //a geometric pattern based on an email hash
+    const MONSTERID = "monsterid"; //a generated 'monster' with different colors, faces, etc
+    const WAVATAR = "wavatar"; //generated faces with differing features and backgrounds
+    const RETRO = "retro"; //8-bit arcade-style pixelated faces
+    const BLANK = "blank"; //a transparent PNG image
 
     /**
      * Content rating
      *
      * @var string
      */
-    protected $rating = 'g';
+    protected $rating = null;
 
     /**
      * Image size
      *
      * @var int
      */
-    protected $size = 64;
+    protected $size = null;
 
     /**
      * Default image type.
      *
      * @var mixed
      */
-    protected $image_default = 'mm';
+    protected $default_image = null;
 
     /**
      * If default image shall be shown
@@ -42,14 +49,21 @@ class Kohana_Gravatar
      *
      * @var boolean
      */
-    protected $default_force = FALSE;
+    protected $force_default = false;
 
     /**
      * Whether or not to use HTTPS
      *
      * @var boolean
      */
-    protected $https = TRUE;
+    protected $https = false;
+
+    /**
+     * Download destination (local directory)
+     *
+     * @var string
+     */
+    protected $destination = null;
 
     /**
      * Returns new \Gravatar object
@@ -63,24 +77,6 @@ class Kohana_Gravatar
     }
 
     /**
-     * Constructor forces execution of $this->setup()
-     *
-     * @param array $params
-     * @return \Kohana_Gravatar
-     */
-    public function __construct(array $params = array())
-    {
-        // execute setup method
-        if (!empty($params))
-        {
-            $this->setup($params);
-        }
-
-        // return self
-        return $this;
-    }
-
-    /**
      * Helps to load default settings passed by array.
      *
      * @param array $params
@@ -88,115 +84,71 @@ class Kohana_Gravatar
      */
     public function setup(array $params)
     {
-        // email
-        if (isset($params['email']))
+        // destination
+        if (isset($params['destination']))
         {
-            $this->email_set($params['email']);
+            $this->destination($params['destination']);
+        }
+        else
+        {
+            $this->destination(sys_get_temp_dir());
         }
 
         // size
         if (isset($params['size']))
         {
-            $this->size_set($params['size']);
+            $this->size($params['size']);
         }
 
         // https
         if (isset($params['https']))
         {
-            $this->https_set($params['https']);
+            $this->https($params['https']);
         }
 
         // rating
         if (isset($params['rating']))
         {
-            $this->rating_set($params['rating']);
+            $this->rating($params['rating']);
         }
 
-        // force default
+        // default image
         if (isset($params['default']))
         {
-            $this->default_set($params['default']);
+            $this->default_image($params['default']);
         }
 
         // force default
         if (isset($params['default_force']))
         {
-            $this->default_force($params['default_force']);
+            $this->force_default($params['default_force']);
         }
 
-        // return self
         return $this;
-    }
-
-    /**
-     * Resets all properties. This function helps to reuse object for another gravatar request.
-     *
-     * @return \Kohana_Gravatar
-     */
-    public function reset()
-    {
-        // reset properties
-        $this->email = $this->rating = $this->size = $this->image_default = $this->default_force = NULL;
-        $this->https = TRUE;
-
-        // return self
-        return $this;
-    }
-
-    /**
-     * Returns gravatar URL based on passed settings.
-     *
-     * @throws \Kohana_Exception
-     * @return string
-     */
-    protected function url_make()
-    {
-        // validate object
-        $this->validate();
-
-        // https / http
-        $url = $this->https ? 'https://secure.' : 'http://www.';
-        // base url
-        $url .= 'gravatar.com/avatar/';
-        // hashed email
-        $url .= md5($this->email);
-        // settings
-        $url .= URL::query(array(
-                    // image size
-                    's' => $this->size,
-                    // default image
-                    'd' => $this->image_default,
-                    // image rating
-                    'r' => $this->rating,
-                    // force default imageF
-                    'f' => ($this->default_force ? 'y' : NULL)
-                        ), FALSE
-        );
-
-        // return url
-        return $url;
     }
 
     /**
      * Public function returning $this->url_make();
      *
+     * @param $email
      * @return string
      */
-    public function url()
+    public function url($email)
     {
-        return $this->url_make();
+        return $this->url_make($email);
     }
 
     /**
      * Returns html code e.g.
      * <img src="htp://someurl" />
      *
+     * @param string $email
      * @param array $attributes
      * @param boolean $protocol
      * @param boolean $index
      * @return string
      */
-    public function image(array $attributes = NULL, $protocol = NULL, $index = FALSE)
+    public function image($email, array $attributes = null, $protocol = null, $index = false)
     {
         // set auto attributes
         $attributes_auto = array(
@@ -208,40 +160,32 @@ class Kohana_Gravatar
         $attributes = Arr::merge($attributes_auto, (array) $attributes);
 
         // return html
-        return HTML::image($this->url_make(), $attributes, $protocol, $index);
+        return HTML::image($this->url_make($email), $attributes, $protocol, $index);
     }
 
     /**
      * Downloads gravatar to location on server. Defaults to tmp directory.
      *
-     * @param mixed $destination
+     * @param string $email
      * @throws \Kohana_Exception
      * @return \stdClass
      */
-    public function download($destination = NULL)
+    public function download($email)
     {
-        // get tmp directory if no destination passed
-        if (!$destination)
-        {
-            $destination = sys_get_temp_dir();
-        }
+        // trim leading/trailing white spaces
+        $email = trim($email);
 
-        $destination = Text::reduce_slashes($destination . DIRECTORY_SEPARATOR);
+        // force lowercase
+        $email = strtolower($email);
 
-        // make sure destination is a directory
-        if (!is_dir($destination))
+        // make sure passed email address is valid
+        if (!Valid::email($email))
         {
-            $this->exception('Download destination is not a directory', array(), 100);
-        }
-
-        // make sure destination is writeable
-        if (!is_writable($destination))
-        {
-            $this->exception('Download destination is not writable', array(), 105);
+            $this->exception('Invalid email address passed');
         }
 
         // make url
-        $url = $this->url_make();
+        $url = $this->url_make($email);
 
         try
         {
@@ -291,7 +235,7 @@ class Kohana_Gravatar
 
         try
         {
-            file_put_contents($destination . $filename, file_get_contents($url));
+            file_put_contents($this->destination . $filename, file_get_contents($url));
         } catch (ErrorException $e)
         {
             $this->exception('Download - File could not been downloaded', array(), 400);
@@ -300,154 +244,43 @@ class Kohana_Gravatar
         $result = new stdClass;
         $result->filename = $filename;
         $result->extension = File::ext_by_mime($headers['Content-Type']);
-        $result->location = $destination . $filename;
+        $result->location = $this->destination . $filename;
 
         return $result;
     }
 
     /**
-     * Checks whether all necessary properties have been set correctly.
-     *
-     * @param boolean $throw_exceptions
-     * @throws \Kohana_Exception
-     * @return boolean
-     */
-    public function validate($throw_exceptions = TRUE)
-    {
-        // init var
-        $valid_is = TRUE;
-
-        if (!$this->email)
-        {
-            // set to invalid
-            $valid_is = FALSE;
-
-            if ($throw_exceptions)
-            {
-                $this->exception('Email address has not been set');
-            }
-        }
-
-        if (!$this->rating)
-        {
-            // set to invalid
-            $valid_is = FALSE;
-
-            if ($throw_exceptions)
-            {
-                $this->exception('Rating has not been set');
-            }
-        }
-
-        if (!$this->size)
-        {
-            // set to invalid
-            $valid_is = FALSE;
-
-            if ($throw_exceptions)
-            {
-                $this->exception('Image size has not been set');
-            }
-        }
-
-        if (!$this->image_default)
-        {
-            // set to invalid
-            $valid_is = FALSE;
-
-            if ($throw_exceptions)
-            {
-                $this->exception('Default image has not been set');
-            }
-        }
-
-        if (!$this->image_default)
-        {
-            if ($throw_exceptions)
-            {
-                $this->exception('Default image has not been set');
-            }
-        }
-
-        return $valid_is;
-    }
-
-    /**
-     * Sets used email address.
-     *
-     * @param string $email
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function email_set($email)
-    {
-        // trim leading/trailing white spaces
-        $email = trim($email);
-
-        // make sure passed email address is valid
-        if (!Valid::email($email))
-        {
-            $this->exception('Invalid email address passed');
-        }
-
-        // force lowercase and set property
-        $this->email = strtolower($email);
-
-        // return self
-        return $this;
-    }
-
-    /**
-     * Returns set email address.
-     *
-     * @return string
-     */
-    public function email_get()
-    {
-        return $this->email;
-    }
-
-    /**
-     * Sets returned image size.
+     * Get/set returned image size.
      *
      * @param integer $size
      * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
-    public function size_set($size)
+    public function size($size = null)
     {
-        // make sure passed image size is integer
-        if (!is_int($size))
-        {
-            $this->exception('Image size has to be integer');
+        if (func_num_args()) {
+            if (!is_int($size))
+            {
+                $this->exception('Image size has to be integer');
+            }
+
+            // make sure passed image size is larger than 0
+            if ($size < 1)
+            {
+                $this->exception('Image size needs to be greater than 0');
+            }
+
+            // make sure passed image size is smaller or equal 2048
+            if ($size > 2048)
+            {
+                $this->exception('Image size needs to be smaller or equal 2048');
+            }
+
+            $this->size = $size;
+
+            return $this;
         }
 
-        // make sure passed image size is larger than 0
-        if ($size < 1)
-        {
-            $this->exception('Image size needs to be greater than 0');
-        }
-
-        // make sure passed image size is smaller or equal 2048
-        if ($size > 2048)
-        {
-            $this->exception('Image size needs to be smaller or equal 2048');
-        }
-
-        // set property
-        $this->size = $size;
-
-        // return self
-        return $this;
-    }
-
-    /**
-     * Returns set image size.
-     *
-     * @return mixed
-     */
-    public function size_get()
-    {
         return $this->size;
     }
 
@@ -458,78 +291,27 @@ class Kohana_Gravatar
      * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
-    public function rating_set($rating)
+    public function rating($rating = null)
     {
-        // list of valid ratings
-        $valid_ratings = array('g', 'pg', 'r', 'x');
+        if (func_num_args()) {
+            // list of valid ratings
+            $valid_ratings = array(self::G, self::PG, self::R, self::X);
 
-        // force lowercase and trim leading/trailing white spaces
-        $rating = trim(strtolower($rating));
+            // force lowercase and trim leading/trailing white spaces
+            $rating = trim(strtolower($rating));
 
-        // make sure passed rating is valid
-        if (!in_array($rating, $valid_ratings))
-        {
-            $this->exception('Invalid rating passed');
+            // make sure passed rating is valid
+            if (!in_array($rating, $valid_ratings))
+            {
+                $this->exception('Invalid rating passed');
+            }
+
+            $this->rating = $rating;
+
+            return $this;
         }
 
-        // set property
-        $this->rating = $rating;
-
-        // return self
-        return $this;
-    }
-
-    /**
-     * Returns rating.
-     *
-     * @return string
-     */
-    public function rating_get()
-    {
         return $this->rating;
-    }
-
-    /**
-     * Sets content rating to G
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function rating_set_g()
-    {
-        return $this->rating_set('g');
-    }
-
-    /**
-     * Sets content rating to PG
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function rating_set_pg()
-    {
-        return $this->rating_set('pg');
-    }
-
-    /**
-     * Sets content rating to R
-     *
-     * @return \Kohana_Gravatar
-     */
-    public function rating_set_r()
-    {
-        return $this->rating_set('r');
-    }
-
-    /**
-     * Sets content rating to X
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function rating_set_x()
-    {
-        return $this->rating_set('x');
     }
 
     /**
@@ -539,134 +321,33 @@ class Kohana_Gravatar
      * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
-    public function default_set($image_default)
+    public function default_image($image_default = null)
     {
-        // list of valid imagesets
-        $valid_image_default_types = array(404, 'mm', 'identicon', 'monsterid', 'wavatar', 'retro', 'blank');
+        if (func_num_args()) {
+            // list of valid imagesets
+            $valid_image_default_types = array(self::E404, self::MM, self::IDENTICON, self::MONSTERID, self::WAVATAR, self::RETRO, self::BLANK);
 
-        // trim leading/trailing white spaces
-        $image_default = trim($image_default);
+            // trim leading/trailing white spaces
+            $image_default = trim($image_default);
 
-        // is default image a url?
-        $is_url = Valid::url($image_default);
+            // is default image a url?
+            $is_url = Valid::url($image_default);
 
-        if (!$is_url)
-        {
-            // make sure passed imageset is valid
-            if (!in_array($image_default, $valid_image_default_types))
+            if (!$is_url)
             {
-                $this->exception('Invalid default image passed (valid: :valid_values', array(':valid_values' => implode(',', $valid_image_default_types)));
+                // make sure passed imageset is valid
+                if (!in_array($image_default, $valid_image_default_types))
+                {
+                    $this->exception('Invalid default image passed (valid: :valid_values', array(':valid_values' => implode(',', $valid_image_default_types)));
+                }
             }
-        } else
-        {
-            // encode url
-            $image_default = urlencode($image_default);
+
+            $this->default_image = $image_default;
+
+            return $this;
         }
 
-        // set property
-        $this->image_default = $image_default;
-
-        // return self
-        return $this;
-    }
-
-    /**
-     * Returns $this->image_default;
-     *
-     * @return string
-     */
-    public function image_default_get()
-    {
-        return $this->image_default;
-    }
-
-    /**
-     * Sets default image to url.
-     *
-     * @param string $url
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_set_url($url)
-    {
-        return $this->default_set($url);
-    }
-
-    /**
-     * Sets default image to 404.
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_set_404()
-    {
-        return $this->default_set(404);
-    }
-
-    /**
-     * Sets default image to mm.
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_set_mm()
-    {
-        return $this->default_set('mm');
-    }
-
-    /**
-     * Sets default image to identicon.
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_set_identicon()
-    {
-        return $this->default_set('identicon');
-    }
-
-    /**
-     * Sets default image to monsterid.
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_set_monsterid()
-    {
-        return $this->default_set('monsterid');
-    }
-
-    /**
-     * Sets default image to wavatar.
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_set_wavatar()
-    {
-        return $this->default_set('wavatar');
-    }
-
-    /**
-     * Sets default image to retro.
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_set_retro()
-    {
-        return $this->default_set('retro');
-    }
-
-    /**
-     * Sets default image to blank.
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_set_blank()
-    {
-        return $this->default_set('blank');
+        return $this->default_image;
     }
 
     /**
@@ -676,41 +357,52 @@ class Kohana_Gravatar
      * @throws \Kohana_Exception
      * @return \Gravatar
      */
-    public function default_force_set($force)
+    public function force_default($force = null)
     {
-        // make sure passed image size is integer
-        if (!is_bool($force))
-        {
-            $this->exception('Image size has to be integer');
+        if (func_num_args()) {
+            if (!is_bool($force))
+            {
+                $this->exception('Image size has to be integer');
+            }
+
+            $this->force_default = $force;
+
+            return $this;
         }
 
-        // set property
-        $this->default_force = $force;
-
-        // return self
-        return $this;
+        return $this->force_default;
     }
 
     /**
-     * Forces default image.
+     * Set the directory to save the image
      *
+     * @param string $destination
      * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
-    public function default_force_set_true()
+    public function destination($destination = null)
     {
-        return $this->default_force_set(TRUE);
-    }
+        if (func_num_args()) {
+            $destination = Text::reduce_slashes($destination . DIRECTORY_SEPARATOR);
 
-    /**
-     * Disabled forcing of default image.
-     *
-     * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
-     */
-    public function default_force_set_false()
-    {
-        return $this->default_force_set(FALSE);
+            // make sure destination is a directory
+            if (!is_dir($destination))
+            {
+                $this->exception('Download destination is not a directory', array(), 100);
+            }
+
+            // make sure destination is writeable
+            if (!is_writable($destination))
+            {
+                $this->exception('Download destination is not writable', array(), 105);
+            }
+
+            $this->destination = $destination;
+
+            return $this;
+        }
+
+        return $this->destination;
     }
 
     /**
@@ -720,41 +412,108 @@ class Kohana_Gravatar
      * @throws \Kohana_Exception
      * @return \Kohana_Gravatar
      */
-    public function https_set($enabled)
+    public function https($enabled = null)
     {
-        // make sure passed image size is integer
-        if (!is_bool($enabled))
-        {
-            $this->exception('https needs to be TRUE of FALSE');
+        if (func_num_args()) {
+            if (!is_bool($enabled))
+            {
+                $this->exception('https needs to be true or false');
+            }
+
+            $this->https = $enabled;
+
+            return $this;
         }
 
-        // set property
-        $this->https = $enabled;
-
-        // return self
-        return $this;
+        return $this->https;
     }
 
     /**
-     * Enabled https.
+     * Checks whether all necessary properties have been set correctly.
      *
+     * @param boolean $throw_exceptions
      * @throws \Kohana_Exception
-     * @return \Kohana_Gravatar
+     * @return boolean
      */
-    public function https_set_true()
+    public function validate($throw_exceptions = true)
     {
-        return $this->https_set(TRUE);
+        $valid = true;
+
+        if (!is_null($this->rating) and !$this->rating)
+        {
+            $valid = false;
+
+            if ($throw_exceptions)
+            {
+                $this->exception('Rating has not been set');
+            }
+        }
+
+        if (!is_null($this->size) and !is_int($this->size))
+        {
+            $valid = false;
+
+            if ($throw_exceptions)
+            {
+                $this->exception('Image size has not been set');
+            }
+        }
+
+        if (!is_null($this->default_image) and !$this->default_image)
+        {
+            $valid = false;
+
+            if ($throw_exceptions)
+            {
+                $this->exception('Default image has not been set');
+            }
+        }
+
+        return $valid;
     }
 
     /**
-     * Disables https.
+     * Constructor forces execution of $this->setup()
      *
-     * @throws Kohana_Exception
+     * @param array $params
      * @return \Kohana_Gravatar
      */
-    public function https_set_false()
+    protected function __construct(array $params = array())
     {
-        return $this->https_set(FALSE);
+        $this->setup($params);
+    }
+
+    /**
+     * Returns gravatar URL based on passed settings.
+     *
+     * @param $email
+     * @throws \Kohana_Exception
+     * @return string
+     */
+    protected function url_make($email)
+    {
+        // validate object
+        $this->validate();
+
+        // https / http
+        $url = $this->https ? 'https://secure.' : 'http://www.';
+        // base url
+        $url .= 'gravatar.com/avatar/';
+        // hashed email
+        $url .= md5($email);
+        // settings
+        $url .= URL::query(array(
+            // image size
+            's' => $this->size,
+            // default image
+            'd' => $this->default_image,
+            // image rating
+            'r' => $this->rating,
+            // force default imageF
+            'f' => ($this->force_default ? 'y' : null)
+        ), false);
+
+        return $url;
     }
 
     /**
@@ -766,18 +525,12 @@ class Kohana_Gravatar
      * @param Exception $previous
      * @throws \Kohana_Exception
      */
-    protected function exception($message = '', array $variables = NULL, $code = 0, Exception $previous = NULL)
+    protected function exception($message = '', array $variables = null, $code = 0, Exception $previous = null)
     {
         // prepend string
         $message = 'Gravatar: ' . $message;
 
         throw new Kohana_Exception($message, $variables, $code, $previous);
     }
-
-    public function __toString()
-    {
-        return $this->image();
-    }
-
 }
 
